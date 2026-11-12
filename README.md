@@ -13,13 +13,11 @@
 
 ♡ ─── ⋆⋅☆⋅⋆ ─── ♡
 
-*Made for our Numerical Methods final presentation — understanding the math matters more than perfect accuracy.*
+*Made for our Numerical Methods final presentation.*
 
 </div>
 
 ## ୨୧ about our little project ♡
-
-Can a simple mathematical model tell **who is speaking** just from their voice?
 
 We're building a small **two-speaker identification** system from scratch. Instead of using a pretrained voice AI, we'll turn audio into numerical features, train a **linear regression model**, and optimize its parameters using **gradient descent**.
 
