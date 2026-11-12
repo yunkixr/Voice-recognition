@@ -1,14 +1,3 @@
-"""
-Two-speaker recognition using Logistic Regression + Gradient Descent.
-
-Run:
-  python speaker_recognition_short.py train speaker_A.wav speaker_B.wav
-  python speaker_recognition_short.py predict conversation.wav
-
-Input: 16-bit PCM WAV files. Use the same sample rate and microphone.
-Only Python standard-library modules are used.
-"""
-
 import wave, struct, math, json, random, sys
 
 FRAME_SEC = 0.04
