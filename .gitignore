@@ -1,1 +1,23 @@
+# ୨୧ Python environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 
+# ୨୧ Local settings
+.vscode/
+.env
+.env.*
+
+# ୨୧ Private dataset
+data/
+*.wav
+*.mp3
+*.m4a
+*.flac
+
+# ୨୧ Temporary files
+*.log
+.DS_Store
+Thumbs.db
