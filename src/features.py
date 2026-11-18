@@ -39,13 +39,14 @@ def calculate_zcr(frame):
 
 
 # 3. PITCH USING AUTOCORRELATION
+
 def calculate_pitch(frame, sample_rate):
 
     if len(frame) < 2:
         return 0.0
 
+    # Remove the mean value
     mean = sum(frame) / len(frame)
-
     centered = [x - mean for x in frame]
 
     energy = sum(x * x for x in centered)
@@ -53,6 +54,7 @@ def calculate_pitch(frame, sample_rate):
     if energy < 1e-8:
         return 0.0
 
+    # Frequency range
     min_frequency = 70
     max_frequency = 400
 
@@ -66,15 +68,16 @@ def calculate_pitch(frame, sample_rate):
     best_correlation = float("-inf")
     best_lag = 0
 
+    # Use every 4th sample to reduce computation
+    step = 4
+
     for lag in range(min_lag, max_lag + 1):
 
         correlation = 0
 
-        for i in range(len(centered) - lag):
+        for i in range(0, len(centered) - lag, step):
 
-            correlation += (
-                centered[i] * centered[i + lag]
-            )
+            correlation += centered[i] * centered[i + lag]
 
         if correlation > best_correlation:
 
@@ -89,27 +92,21 @@ def calculate_pitch(frame, sample_rate):
     return pitch
 
 
-# 4. EXTRACT ALL FEATURES
 def extract_features(frames, sample_rate):
 
-    results = []
+    features = []
 
     for index, frame in enumerate(frames):
 
         rms = calculate_rms(frame)
-
         zcr = calculate_zcr(frame)
+        pitch = calculate_pitch(frame, sample_rate)
 
-        pitch = calculate_pitch(
-            frame,
-            sample_rate
-        )
-
-        results.append({
+        features.append({
             "frame": index + 1,
             "rms": rms,
             "zcr": zcr,
             "pitch": pitch
         })
 
-    return results
+    return features
