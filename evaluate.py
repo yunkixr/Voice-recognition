@@ -1,22 +1,3 @@
-#!/usr/bin/env python3
-"""
-Evaluate two-speaker voice-recognition predictions using only Python's
-standard library.
-
-Expected input CSV columns:
-    clip_id,actual,predicted
-
-Labels may be A/B or 0/1 (A=0, B=1).
-
-Examples:
-    python evaluate.py
-    python evaluate.py --predictions predictions.csv
-    python evaluate.py --pitch-only pitch_only_predictions.csv \
-        --combined combined_predictions.csv
-
-This script evaluates predictions supplied in a CSV file. It does not train
-the model or extract features from audio recordings.
-"""
 
 import argparse
 import csv
@@ -24,245 +5,136 @@ import sys
 from pathlib import Path
 
 
-LABEL_TO_NAME = {
-    "A": "A",
-    "0": "A",
-    "B": "B",
-    "1": "B",
-}
 LABELS = ("A", "B")
+LABEL_MAP = {"A": "A", "0": "A", "B": "B", "1": "B"}
 
 
-def normalize_label(value, column_name, row_number):
-    """Convert A/B or 0/1 into the standard A/B labels."""
-    key = str(value).strip().upper()
+def load_predictions(path):
+    path = Path(path)
 
-    if key not in LABEL_TO_NAME:
-        raise ValueError(
-            f"Invalid {column_name!r} value {value!r} on CSV row {row_number}. "
-            "Use A/B or 0/1 (A=0, B=1)."
-        )
+    if not path.is_file():
+        raise FileNotFoundError(f"File not found: {path}")
 
-    return LABEL_TO_NAME[key]
-
-
-def load_predictions(csv_path):
-    """Load and validate a prediction CSV."""
-    csv_path = Path(csv_path)
-
-    if not csv_path.is_file():
-        raise FileNotFoundError(f"Input file not found: {csv_path}")
-
-    records = []
-
-    with csv_path.open("r", newline="", encoding="utf-8-sig") as file:
+    with path.open("r", newline="", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
 
-        if not reader.fieldnames:
-            raise ValueError(f"{csv_path} is empty or has no CSV header.")
+        required = {"clip_id", "actual", "predicted"}
+        if not reader.fieldnames or not required.issubset(reader.fieldnames):
+            raise ValueError(f"Invalid CSV columns in {path}")
 
-        required_columns = {"clip_id", "actual", "predicted"}
-        missing = required_columns - set(reader.fieldnames)
+        records = []
 
-        if missing:
-            raise ValueError(
-                f"{csv_path} is missing required column(s): "
-                f"{', '.join(sorted(missing))}. "
-                "Required columns: clip_id, actual, predicted."
-            )
-
-        for row_number, row in enumerate(reader, start=2):
+        for row in reader:
             clip_id = (row.get("clip_id") or "").strip()
 
             if not clip_id:
-                raise ValueError(
-                    f"Missing clip_id on CSV row {row_number} in {csv_path}."
-                )
+                raise ValueError("Missing clip_id")
 
-            actual = normalize_label(row.get("actual"), "actual", row_number)
-            predicted = normalize_label(
-                row.get("predicted"), "predicted", row_number
-            )
+            try:
+                actual = LABEL_MAP[row["actual"].strip().upper()]
+                predicted = LABEL_MAP[row["predicted"].strip().upper()]
+            except (KeyError, AttributeError):
+                raise ValueError(f"Invalid label in {path}")
 
-            records.append(
-                {
-                    "clip_id": clip_id,
-                    "actual": actual,
-                    "predicted": predicted,
-                    "correct": actual == predicted,
-                }
-            )
+            records.append({
+                "clip_id": clip_id,
+                "actual": actual,
+                "predicted": predicted,
+                "correct": actual == predicted
+            })
 
     if not records:
-        raise ValueError(f"No prediction records found in {csv_path}.")
+        raise ValueError(f"No records found in {path}")
 
     return records
 
 
 def calculate_metrics(records):
-    """Calculate accuracy, per-class metrics, and a 2x2 confusion matrix."""
-    matrix = {
-        "A": {"A": 0, "B": 0},
-        "B": {"A": 0, "B": 0},
-    }
+    matrix = {a: {b: 0 for b in LABELS} for a in LABELS}
 
-    for record in records:
-        matrix[record["actual"]][record["predicted"]] += 1
+    for row in records:
+        matrix[row["actual"]][row["predicted"]] += 1
 
     total = len(records)
-    correct = matrix["A"]["A"] + matrix["B"]["B"]
-    accuracy = correct / total
-
-    class_metrics = {}
+    correct = sum(matrix[label][label] for label in LABELS)
+    classes = {}
 
     for label in LABELS:
-        other_label = "B" if label == "A" else "A"
+        other = "B" if label == "A" else "A"
 
-        true_positive = matrix[label][label]
-        false_positive = matrix[other_label][label]
-        false_negative = matrix[label][other_label]
+        tp = matrix[label][label]
+        fp = matrix[other][label]
+        fn = matrix[label][other]
 
-        precision_denominator = true_positive + false_positive
-        recall_denominator = true_positive + false_negative
+        precision = tp / (tp + fp) if tp + fp else 0
+        recall = tp / (tp + fn) if tp + fn else 0
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0
 
-        precision = (
-            true_positive / precision_denominator
-            if precision_denominator else 0.0
-        )
-        recall = (
-            true_positive / recall_denominator
-            if recall_denominator else 0.0
-        )
-        f1_score = (
-            2 * precision * recall / (precision + recall)
-            if precision + recall else 0.0
-        )
-
-        class_metrics[label] = {
+        classes[label] = {
             "precision": precision,
             "recall": recall,
-            "f1_score": f1_score,
-            "support": matrix[label]["A"] + matrix[label]["B"],
+            "f1_score": f1,
+            "support": tp + fn
         }
 
     return {
         "total": total,
         "correct": correct,
         "incorrect": total - correct,
-        "accuracy": accuracy,
-        "confusion_matrix": matrix,
-        "class_metrics": class_metrics,
+        "accuracy": correct / total,
+        "matrix": matrix,
+        "classes": classes
     }
 
 
-def write_results(records, output_path):
-    """Write each clip's actual label, prediction, and correctness."""
-    fields = ["clip_id", "actual", "predicted", "correct"]
-
-    with Path(output_path).open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=fields)
-        writer.writeheader()
-
-        for record in records:
-            writer.writerow(
-                {
-                    "clip_id": record["clip_id"],
-                    "actual": record["actual"],
-                    "predicted": record["predicted"],
-                    "correct": record["correct"],
-                }
-            )
-
-
-def write_error_analysis(records, output_path):
-    """Write only the incorrectly classified clips."""
-    fields = ["clip_id", "actual", "predicted", "error_type"]
-
-    with Path(output_path).open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=fields)
-        writer.writeheader()
-
-        for record in records:
-            if not record["correct"]:
-                writer.writerow(
-                    {
-                        "clip_id": record["clip_id"],
-                        "actual": record["actual"],
-                        "predicted": record["predicted"],
-                        "error_type": (
-                            f"Actual {record['actual']} predicted as "
-                            f"{record['predicted']}"
-                        ),
-                    }
-                )
-
-
-def write_metrics_summary(metrics, output_path):
-    """Write overall and per-class metrics."""
-    rows = [
-        ("total_samples", metrics["total"]),
-        ("correct_predictions", metrics["correct"]),
-        ("incorrect_predictions", metrics["incorrect"]),
-        ("accuracy", f"{metrics['accuracy']:.6f}"),
-    ]
-
-    for label in LABELS:
-        result = metrics["class_metrics"][label]
-        rows.extend(
-            [
-                (f"{label}_precision", f"{result['precision']:.6f}"),
-                (f"{label}_recall", f"{result['recall']:.6f}"),
-                (f"{label}_f1_score", f"{result['f1_score']:.6f}"),
-                (f"{label}_support", result["support"]),
-            ]
-        )
-
-    with Path(output_path).open("w", newline="", encoding="utf-8") as file:
+def save_csv(path, headers, rows):
+    with Path(path).open("w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["metric", "value"])
+        writer.writerow(headers)
         writer.writerows(rows)
 
 
-def write_confusion_matrix(metrics, output_path):
-    """Save the confusion matrix as a CSV file."""
-    matrix = metrics["confusion_matrix"]
+def save_results(records, metrics, output):
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
 
-    with Path(output_path).open("w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["actual/predicted", "A", "B"])
-        writer.writerow(["A", matrix["A"]["A"], matrix["A"]["B"]])
-        writer.writerow(["B", matrix["B"]["A"], matrix["B"]["B"]])
+    save_csv(
+        output / "results.csv",
+        ["clip_id", "actual", "predicted", "correct"],
+        [[r["clip_id"], r["actual"], r["predicted"], r["correct"]] for r in records]
+    )
 
+    save_csv(
+        output / "error_analysis.csv",
+        ["clip_id", "actual", "predicted", "error_type"],
+        [[r["clip_id"], r["actual"], r["predicted"],
+          f"Actual {r['actual']} predicted as {r['predicted']}"]
+         for r in records if not r["correct"]]
+    )
 
-def write_experiment_comparison(pitch_metrics, combined_metrics, output_path):
-    """Save accuracy results for two feature configurations."""
-    with Path(output_path).open("w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(
-            ["experiment", "features", "total_samples", "accuracy"]
-        )
-        writer.writerow(
-            [
-                "pitch_only",
-                "pitch",
-                pitch_metrics["total"],
-                f"{pitch_metrics['accuracy']:.6f}",
-            ]
-        )
-        writer.writerow(
-            [
-                "pitch_zcr_rms",
-                "pitch + ZCR + RMS",
-                combined_metrics["total"],
-                f"{combined_metrics['accuracy']:.6f}",
-            ]
-        )
+    rows = [
+        ["total_samples", metrics["total"]],
+        ["correct_predictions", metrics["correct"]],
+        ["incorrect_predictions", metrics["incorrect"]],
+        ["accuracy", metrics["accuracy"]]
+    ]
+
+    for label, data in metrics["classes"].items():
+        for key, value in data.items():
+            rows.append([f"{label}_{key}", value])
+
+    save_csv(output / "metrics_summary.csv", ["metric", "value"], rows)
+
+    matrix = metrics["matrix"]
+    save_csv(
+        output / "confusion_matrix.csv",
+        ["actual/predicted", "A", "B"],
+        [["A", matrix["A"]["A"], matrix["A"]["B"]],
+         ["B", matrix["B"]["A"], matrix["B"]["B"]]]
+    )
 
 
 def print_report(metrics):
-    """Print a readable evaluation summary."""
-    matrix = metrics["confusion_matrix"]
-
     print("\nEVALUATION RESULTS")
     print("------------------")
     print(f"Total samples : {metrics['total']}")
@@ -270,97 +142,68 @@ def print_report(metrics):
     print(f"Incorrect     : {metrics['incorrect']}")
     print(f"Accuracy      : {metrics['accuracy']:.2%}")
 
-    print("\nConfusion Matrix (rows = actual, columns = predicted)")
+    print("\nCONFUSION MATRIX")
     print("              Predicted A   Predicted B")
-    print(
-        f"Actual A      {matrix['A']['A']:>10}   "
-        f"{matrix['A']['B']:>10}"
-    )
-    print(
-        f"Actual B      {matrix['B']['A']:>10}   "
-        f"{matrix['B']['B']:>10}"
-    )
 
-    print("\nPer-class metrics")
     for label in LABELS:
-        result = metrics["class_metrics"][label]
         print(
-            f"{label}: precision={result['precision']:.2%}, "
-            f"recall={result['recall']:.2%}, "
-            f"F1={result['f1_score']:.2%}, "
-            f"support={result['support']}"
+            f"Actual {label}      "
+            f"{metrics['matrix'][label]['A']:>10}   "
+            f"{metrics['matrix'][label]['B']:>10}"
+        )
+
+    print("\nPER-CLASS METRICS")
+
+    for label, data in metrics["classes"].items():
+        print(
+            f"{label}: Precision={data['precision']:.2%}, "
+            f"Recall={data['recall']:.2%}, "
+            f"F1={data['f1_score']:.2%}, "
+            f"Support={data['support']}"
         )
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate A/B voice-recognition predictions."
+        description="Evaluate A/B voice recognition."
     )
-    parser.add_argument(
-        "--predictions",
-        default="predictions.csv",
-        help="CSV with clip_id, actual, predicted (default: predictions.csv).",
-    )
-    parser.add_argument(
-        "--pitch-only",
-        help="Optional predictions CSV for the pitch-only experiment.",
-    )
-    parser.add_argument(
-        "--combined",
-        help="Optional predictions CSV for pitch + ZCR + RMS.",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default=".",
-        help="Directory for generated files (default: current directory).",
-    )
+
+    parser.add_argument("--predictions", default="predictions.csv")
+    parser.add_argument("--pitch-only")
+    parser.add_argument("--combined")
+    parser.add_argument("--output-dir", default=".")
 
     args = parser.parse_args()
 
     if bool(args.pitch_only) != bool(args.combined):
-        parser.error("--pitch-only and --combined must be supplied together.")
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+        parser.error("--pitch-only and --combined must be used together")
 
     try:
         records = load_predictions(args.predictions)
         metrics = calculate_metrics(records)
 
-        write_results(records, output_dir / "results.csv")
-        write_error_analysis(records, output_dir / "error_analysis.csv")
-        write_metrics_summary(metrics, output_dir / "metrics_summary.csv")
-        write_confusion_matrix(metrics, output_dir / "confusion_matrix.csv")
-
+        save_results(records, metrics, args.output_dir)
         print_report(metrics)
 
         if args.pitch_only and args.combined:
-            pitch_metrics = calculate_metrics(
-                load_predictions(args.pitch_only)
-            )
-            combined_metrics = calculate_metrics(
-                load_predictions(args.combined)
-            )
+            pitch = calculate_metrics(load_predictions(args.pitch_only))
+            combined = calculate_metrics(load_predictions(args.combined))
 
-            write_experiment_comparison(
-                pitch_metrics,
-                combined_metrics,
-                output_dir / "experiment_comparison.csv",
+            save_csv(
+                Path(args.output_dir) / "experiment_comparison.csv",
+                ["experiment", "features", "total_samples", "accuracy"],
+                [
+                    ["pitch_only", "pitch", pitch["total"], pitch["accuracy"]],
+                    ["pitch_zcr_rms", "pitch + ZCR + RMS",
+                     combined["total"], combined["accuracy"]]
+                ]
             )
 
             print("\nEXPERIMENT COMPARISON")
-            print("---------------------")
-            print(f"Pitch only       : {pitch_metrics['accuracy']:.2%}")
-            print(f"Pitch + ZCR + RMS: {combined_metrics['accuracy']:.2%}")
+            print(f"Pitch only       : {pitch['accuracy']:.2%}")
+            print(f"Pitch + ZCR + RMS: {combined['accuracy']:.2%}")
 
-        print(f"\nFiles saved in: {output_dir.resolve()}")
-        print(" - results.csv")
-        print(" - metrics_summary.csv")
-        print(" - error_analysis.csv")
-        print(" - confusion_matrix.csv")
-
-        if args.pitch_only and args.combined:
-            print(" - experiment_comparison.csv")
+        print(f"\nFiles saved in: {Path(args.output_dir).resolve()}")
 
     except (FileNotFoundError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
