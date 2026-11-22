@@ -13,7 +13,7 @@ from src.model import (
 from src.gradient_descent import gradient_descent
 
 
-# Tiny dataset from the hand calculation in docs/model_math.md
+# Small dataset for testing one gradient descent iteration
 X_TINY = np.array([
     [1.0, 2.0],
     [2.0, 0.0],
