@@ -49,8 +49,8 @@ def process_speaker(file_path, speaker_name):
 def main():
 
     recordings = {
-        "Voice_A": "dataset/voice_A/laki.wav",
-        "Voice_B": "dataset/voice_B/Perempuan.wav"
+        "Voice_A": "src/voice_A/laki.wav",
+        "Voice_B": "src/voice_B/Perempuan.wav"
     }
 
     all_data = []
