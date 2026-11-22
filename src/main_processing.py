@@ -70,7 +70,7 @@ def main():
             return
 
     # Save extracted features
-    output_file = "src/audio_features.csv"
+    output_file = "output/audio_features.csv"
 
     columns = [
         "speaker",
