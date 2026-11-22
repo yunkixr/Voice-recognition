@@ -16,9 +16,6 @@ def read_audio(file_path):
         if sample_width != 2:
             raise ValueError("Audio must be 16-bit PCM WAV.")
 
-        if audio.getcomptype() != "NONE":
-            raise ValueError("Audio must be uncompressed PCM.")
-
         raw_data = audio.readframes(total_frames)
 
     total_samples = len(raw_data) // 2
