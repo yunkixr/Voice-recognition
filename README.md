@@ -6,11 +6,6 @@
 
 *Two-Speaker Voice Identification using Linear Regression & Gradient Descent*
 
-![Python](https://img.shields.io/badge/Python-3.11%2B-EFA6C8?style=for-the-badge&logo=python&logoColor=white)
-![Numerical Methods](https://img.shields.io/badge/Numerical_Methods-Project-F4B6CF?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-In_Progress-D98FB4?style=for-the-badge)
-![Presentation](https://img.shields.io/badge/Presentation-24_Nov_2026-C77FA3?style=for-the-badge)
-
 ♡ ─── ⋆⋅☆⋅⋆ ─── ♡
 
 *Made for our Numerical Methods final presentation.*
