@@ -2,7 +2,7 @@
 import math
 
 
-# 1. ROOT MEAN SQUARE
+
 def calculate_rms(frame):
 
     if len(frame) == 0:
@@ -20,7 +20,7 @@ def calculate_rms(frame):
     return rms
 
 
-# 2. ZERO CROSSING RATE
+# ZERO CROSSING RATE
 def calculate_zcr(frame):
 
     if len(frame) < 2:
@@ -38,7 +38,7 @@ def calculate_zcr(frame):
     return zcr
 
 
-# 3. PITCH USING AUTOCORRELATION
+# PITCH USING AUTOCORRELATION
 
 def calculate_pitch(frame, sample_rate):
 
