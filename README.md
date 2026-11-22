@@ -33,11 +33,6 @@ We're building a small **two-speaker identification** system from scratch. Inste
 | 🩰 **Aurora** | Audio preprocessing, pitch, ZCR, RMS, dataset coordination | `src/audio_processing.py`, `src/features.py` |
 | 🧸 **Putra** | Testing, evaluation, confusion matrix, final demo | `evaluate.py`, `demo.py` |
 
-<div align="center">
-
-**୨୧ one repo · three contributors · one working project ୨୧**
-
-</div>
 
 ## ୨୧ how it works ♡
 
