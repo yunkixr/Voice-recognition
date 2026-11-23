@@ -145,8 +145,8 @@ def train_model():
     pause()
 
 
-def evaluate_individual_speakers():
-    print("\nINDIVIDUAL SPEAKER EVALUATION")
+def evaluate_individual_audios():
+    print("\nINDIVIDUAL audio EVALUATION")
     print("=" * 55)
 
     run_script(
@@ -214,7 +214,7 @@ def evaluate_conversation():
 
 
 def view_individual_results():
-    print("\nINDIVIDUAL SPEAKER RESULTS")
+    print("\nINDIVIDUAL audio RESULTS")
     print("=" * 55)
 
     display_evaluation("output/evaluation")
@@ -233,12 +233,12 @@ def main_menu():
     while True:
         print("\n")
         print("=" * 55)
-        print("       SPEAKER CLASSIFICATION SYSTEM")
+        print("       audio CLASSIFICATION SYSTEM")
         print("=" * 55)
 
         print("1. Extract Audio Features")
-        print("2. Train Speaker Model")
-        print("3. Evaluate Individual Speakers")
+        print("2. Train audio Model")
+        print("3. Evaluate Individual audios")
         print("4. Predict Combined Conversation")
         print("5. Evaluate Combined Conversation")
         print("6. View Individual Evaluation Results")
@@ -256,7 +256,7 @@ def main_menu():
             train_model()
 
         elif choice == "3":
-            evaluate_individual_speakers()
+            evaluate_individual_audios()
 
         elif choice == "4":
             predict_conversation()
@@ -271,7 +271,7 @@ def main_menu():
             view_conversation_results()
 
         elif choice == "8":
-            print("\nExiting Speaker Classification System.")
+            print("\nExiting audio Classification System.")
             break
 
         else:
