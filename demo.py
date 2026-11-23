@@ -233,7 +233,7 @@ def main_menu():
     while True:
         print("\n")
         print("=" * 55)
-        print("       audio CLASSIFICATION SYSTEM")
+        print("       Audio Recognition")
         print("=" * 55)
 
         print("1. Extract Audio Features")
