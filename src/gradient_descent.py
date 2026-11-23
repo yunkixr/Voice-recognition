@@ -10,22 +10,19 @@ def gradient_descent(X, y, learning_rate=LEARNING_RATE,
     bias = 0.0
     loss_history = []
 
-    for epoch in range(max_epochs):
-        y_pred = predict(X, weights, bias)
-        loss = half_mse_loss(y_pred, y)
-        loss_history.append(loss)
+    for _ in range(max_epochs):
+        predictions = predict(X, weights, bias)
+        loss = half_mse_loss(predictions, y)
 
-        dw, db = compute_gradients(X, y, y_pred)
-
-        weights = weights - learning_rate * dw
-        bias = bias - learning_rate * db
-
-        # Converged: the loss barely changes between two iterations.
-        if epoch > 0 and abs(loss_history[-2] - loss) < tolerance:
-            break
-
-        # Diverged: the learning rate is too large and the loss blew up.
         if not np.isfinite(loss) or loss > 1e10:
             break
+
+        loss_history.append(loss)
+        if len(loss_history) > 1 and abs(loss_history[-2] - loss) < tolerance:
+            break
+
+        dw, db = compute_gradients(X, y, predictions)
+        weights = weights - learning_rate * dw
+        bias = bias - learning_rate * db
 
     return weights, bias, loss_history
