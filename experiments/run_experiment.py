@@ -7,7 +7,7 @@ from src.gradient_descent import gradient_descent
 
 
 FEATURE_CSV = "output/audio_features.csv"
-PREDICTIONS_CSV = "output/predictions.csv"
+PREDICTIONS_CSV = "output/experiments_predictions.csv"
 CSV_COLUMN = {"pitch_hz": "pitch", "zcr": "zcr", "rms": "rms"}
 
 
