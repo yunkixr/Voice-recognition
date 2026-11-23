@@ -133,30 +133,6 @@ Our end-to-end demo is still **in development**. Once `demo.py` is merged, we'll
 - **Putra → everyone:** evaluation results and a reproducible demo.
 - Agree on function signatures **before merging**; coordinate any interface changes in the group chat.
 
-## ୨୧ our mini timeline ♡
-
-| Date | Milestone |
-|:--|:--|
-| **13 Nov** | GitHub structure & branches ready |
-| **15 Nov** | Dataset ready |
-| **16 Nov** | Audio features ready |
-| **17 Nov** | Regression + gradient descent ready |
-| **18 Nov** | First end-to-end integration |
-| **20 Nov** | Experiments & evaluation |
-| **21 Nov** | Code freeze |
-| **22 Nov** | Slides finished |
-| **23 Nov** | Rehearsal & backup demo |
-| **24 Nov 2026** | ✨ Presentation day! |
-
-## ୨୧ working together on GitHub ♡
-
-Everyone works in a separate branch:
-
-- `aurora-audio` — preprocessing and feature extraction
-- `regina-model` — numerical model and gradient descent
-- `putra-demo` — evaluation and demo
-
-Our flow: **branch → code → test → commit → push → pull request → review → merge**.
 
 ```powershell
 git switch main
