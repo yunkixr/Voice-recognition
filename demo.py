@@ -11,9 +11,11 @@ SCRIPTS = {
     "processing": "main_processing.py",
     "training": "training.py",
     "evaluation": "evaluate.py",
+    "converter": "Hzconverter.py",
     "conversation": "conversationprediction.py"
 }
 
+ORIGINAL_CONVERSATION_AUDIO = "src/conversation/conversation.wav"
 CONVERSATION_AUDIO = "src/conversation/conversation_converted.wav"
 MODEL_FILE = "speaker_model.json"
 
@@ -40,7 +42,7 @@ def run_script(script_name, arguments=None):
     script_path = find_script(script_name)
 
     if script_path is None:
-        return
+        return False
 
     module_name = (
         script_path.relative_to(PROJECT_DIR)
@@ -70,15 +72,17 @@ def run_script(script_name, arguments=None):
 
         if result.returncode == 0:
             print("\nOperation completed.")
-        else:
-            print(
-                f"\nOperation failed with exit code "
-                f"{result.returncode}."
-            )
+            return True
+
+        print(
+            f"\nOperation failed with exit code "
+            f"{result.returncode}."
+        )
+        return False
 
     except Exception as error:
         print(f"\nError while running script: {error}")
-
+        return False
 
 
 def display_csv(file_path):
@@ -145,8 +149,8 @@ def train_model():
     pause()
 
 
-def evaluate_individual_audios():
-    print("\nINDIVIDUAL audio EVALUATION")
+def evaluate_individual_speakers():
+    print("\nINDIVIDUAL SPEAKER EVALUATION")
     print("=" * 55)
 
     run_script(
@@ -161,32 +165,63 @@ def evaluate_individual_audios():
 
     pause()
 
+def convert_conversation_audio():
+    print("\nSAMPLE RATE CONVERSION (44,100 Hz -> 48,000 Hz)")
+    print("=" * 55)
+
+    original_path = PROJECT_DIR / ORIGINAL_CONVERSATION_AUDIO
+
+    if not original_path.is_file():
+        print(f"Error: Audio file not found: {original_path}")
+    else:
+        run_script(SCRIPTS["converter"])
+
+    pause()
 
 def predict_conversation():
     print("\nCOMBINED CONVERSATION PREDICTION")
     print("=" * 55)
 
-    audio_path = PROJECT_DIR / CONVERSATION_AUDIO
+    original_path = PROJECT_DIR / ORIGINAL_CONVERSATION_AUDIO
+    converted_path = PROJECT_DIR / CONVERSATION_AUDIO
 
-    if not audio_path.is_file():
-        print(f"Error: Audio file not found: {audio_path}")
-    elif not (PROJECT_DIR / MODEL_FILE).is_file():
+    if not (PROJECT_DIR / MODEL_FILE).is_file():
         print(f"Error: Model file not found: {MODEL_FILE}")
+        pause()
+        return
+
+    # Step 1: convert 44,100 Hz -> 48,000 Hz
+    if original_path.is_file():
+        print("\nStep 1: Converting audio to 48,000 Hz...")
+        converted = run_script(SCRIPTS["converter"])
+
+        if not converted:
+            print("Conversion failed. Prediction cancelled.")
+            pause()
+            return
+    elif converted_path.is_file():
+        print("\nOriginal recording not found.")
+        print("Using the existing converted file.")
     else:
-        run_script(
-            SCRIPTS["conversation"],
-            [
-                "--audio",
-                CONVERSATION_AUDIO,
-                "--model",
-                MODEL_FILE,
-                "--output",
-                "output/conversation_predictions.csv"
-            ]
-        )
+        print(f"Error: Audio file not found: {original_path}")
+        pause()
+        return
+
+    # Step 2: predict
+    print("\nStep 2: Predicting speakers...")
+    run_script(
+        SCRIPTS["conversation"],
+        [
+            "--audio",
+            CONVERSATION_AUDIO,
+            "--model",
+            MODEL_FILE,
+            "--output",
+            "output/conversation_predictions.csv"
+        ]
+    )
 
     pause()
-
 
 def evaluate_conversation():
     print("\nCOMBINED CONVERSATION EVALUATION")
@@ -214,7 +249,7 @@ def evaluate_conversation():
 
 
 def view_individual_results():
-    print("\nINDIVIDUAL audio RESULTS")
+    print("\nINDIVIDUAL SPEAKER RESULTS")
     print("=" * 55)
 
     display_evaluation("output/evaluation")
@@ -233,12 +268,12 @@ def main_menu():
     while True:
         print("\n")
         print("=" * 55)
-        print("       Audio Recognition")
+        print("       Audio SYSTEM")
         print("=" * 55)
 
         print("1. Extract Audio Features")
-        print("2. Train audio Model")
-        print("3. Evaluate Individual audios")
+        print("2. Train Audio Model")
+        print("3. Evaluate Individual Speakers")
         print("4. Predict Combined Conversation")
         print("5. Evaluate Combined Conversation")
         print("6. View Individual Evaluation Results")
@@ -256,7 +291,7 @@ def main_menu():
             train_model()
 
         elif choice == "3":
-            evaluate_individual_audios()
+            evaluate_individual_speakers()
 
         elif choice == "4":
             predict_conversation()
@@ -271,13 +306,12 @@ def main_menu():
             view_conversation_results()
 
         elif choice == "8":
-            print("\nExiting audio Classification System.")
+            print("\nExiting Speaker Classification System.")
             break
 
         else:
             print("\nInvalid option. Please select 1-8.")
             pause()
-
 
 if __name__ == "__main__":
     main_menu()
