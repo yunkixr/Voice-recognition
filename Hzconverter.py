@@ -1,9 +1,10 @@
-
 import wave
 import numpy as np
 
 input_file = "src/conversation/conversation.wav"
 output_file = "src/conversation/conversation_converted.wav"
+
+TARGET_RATE = 48000
 
 with wave.open(input_file, "rb") as audio:
     channels = audio.getnchannels()
@@ -14,9 +15,6 @@ with wave.open(input_file, "rb") as audio:
 if sample_width != 2:
     raise ValueError("Audio must be 16-bit PCM WAV.")
 
-if sample_rate != 44100:
-    raise ValueError(f"Expected 44100 Hz, got {sample_rate} Hz.")
-
 samples = np.frombuffer(frames, dtype="<i2")
 
 if channels > 1:
@@ -25,10 +23,10 @@ if channels > 1:
 samples = samples.astype(np.float64)
 
 old_length = len(samples)
-new_length = round(old_length * 48000 / 44100)
+new_length = round(old_length * TARGET_RATE / sample_rate)
 
 old_positions = np.arange(old_length)
-new_positions = np.arange(new_length) * 44100 / 48000
+new_positions = np.arange(new_length) * sample_rate / TARGET_RATE
 
 if channels == 1:
     converted = np.interp(
@@ -55,10 +53,10 @@ converted = np.clip(
 with wave.open(output_file, "wb") as audio:
     audio.setnchannels(channels)
     audio.setsampwidth(2)
-    audio.setframerate(48000)
+    audio.setframerate(TARGET_RATE)
     audio.writeframes(converted.tobytes())
 
 print("Conversion complete!")
 print("Output:", output_file)
-print("Original sample rate: 44100 Hz")
-print("New sample rate: 48000 Hz")
+print("Original sample rate:", sample_rate, "Hz")
+print("New sample rate:", TARGET_RATE, "Hz")
