@@ -1,6 +1,6 @@
-import numpy as np
+import numpy as np # for arrays n matrix 
 
-from src.config import LEARNING_RATE, MAX_EPOCHS, TOLERANCE
+from src.config import LEARNING_RATE, MAX_EPOCHS, TOLERANCE # 0.05, 1500, 10e-10
 from src.model import predict, half_mse_loss, compute_gradients
 
 
